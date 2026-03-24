@@ -71,9 +71,10 @@ function HttpServer:start()
     console.log("  GET /map - Get current map information")
     console.log("  GET /input - Send controller input")
     console.log("  GET /loadstate - Load BizHawk state (name parameter required)")
+    console.log("  GET /savestate - Save BizHawk state (name parameter required)")
+    console.log("  GET /screenshot - Take screenshot (optional name parameter)")
     console.log("  GET /status - Get server status")
     console.log("  GET / - API documentation")
-    -- console.log("  POST /setMoney - Set player's money amount")
     
     return true
 end
@@ -190,6 +191,10 @@ function HttpServer:handleRequest(client, requestLine)
             apiHandlers.handleStatusRequest(client, self.memoryReader, self.port, self.host, self.isRunning)
         elseif path == "/loadstate" then
             apiHandlers.handleLoadStateRequest(client, self.memoryReader, query)
+        elseif path == "/savestate" then
+            apiHandlers.handleSaveStateRequest(client, self.memoryReader, query)
+        elseif path == "/screenshot" then
+            apiHandlers.handleScreenshotRequest(client, self.memoryReader, query)
         elseif path == "/" then
             apiHandlers.handleRootRequest(client, self.port, self.host)
         else

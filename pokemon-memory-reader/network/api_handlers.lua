@@ -315,4 +315,104 @@ function ApiHandlers.handleLoadStateRequest(client, memoryReader, query)
         json.encode({success = true, message = "State loaded: " .. stateName, path = statePath}))
 end
 
+function ApiHandlers.handleSaveStateRequest(client, memoryReader, query)
+    if not memoryReader.isInitialized then
+        httpUtils.sendResponse(client, 503, "Service Unavailable", "application/json",
+            json.encode({error = "Memory reader not initialized", message = "No Pokemon game detected"}))
+        return
+    end
+
+    local stateName = query and query.name
+    if not stateName then
+        httpUtils.sendResponse(client, 400, "Bad Request", "application/json",
+            json.encode({error = "Missing parameter", message = "name parameter is required"}))
+        return
+    end
+
+    -- 获取当前游戏信息，确定平台
+    local gameInfo = memoryReader.currentGame and memoryReader.currentGame.gameInfo
+    local platform = "GBA"  -- 默认平台
+
+    if gameInfo then
+        local gen = gameInfo.generation
+        if gen == 1 or gen == 2 then
+            platform = "Gameboy"
+        elseif gen == 3 then
+            platform = "GBA"
+        end
+    end
+
+    -- 存档路径: ../../平台/State/存档名.State
+    local statePath = "../../" .. platform .. "/State/" .. stateName .. ".State"
+
+    console.log("Saving state: " .. statePath)
+
+    local success, result = pcall(function()
+        return savestate.save(statePath)
+    end)
+
+    if not success then
+        console.log("Failed to save state: " .. tostring(result))
+        httpUtils.sendResponse(client, 500, "Internal Server Error", "application/json",
+            json.encode({error = "Failed to save state", message = tostring(result), path = statePath}))
+        return
+    end
+
+    console.log("State saved successfully: " .. statePath)
+    httpUtils.sendResponse(client, 200, "OK", "application/json",
+        json.encode({success = true, message = "State saved: " .. stateName, path = statePath}))
+end
+
+function ApiHandlers.handleScreenshotRequest(httpClient, memoryReader, query)
+    if not memoryReader.isInitialized then
+        httpUtils.sendResponse(httpClient, 503, "Service Unavailable", "application/json",
+            json.encode({error = "Memory reader not initialized", message = "No Pokemon game detected"}))
+        return
+    end
+
+    -- 获取截图文件名参数，默认使用时间戳
+    local screenshotName = query and query.name
+    if not screenshotName then
+        screenshotName = os.date("%Y%m%d_%H%M%S")
+    end
+
+    -- 获取当前游戏信息，确定平台
+    local gameInfo = memoryReader.currentGame and memoryReader.currentGame.gameInfo
+    local platform = "GBA"  -- 默认平台
+
+    if gameInfo then
+        local gen = gameInfo.generation
+        if gen == 1 or gen == 2 then
+            platform = "Gameboy"
+        elseif gen == 3 then
+            platform = "GBA"
+        end
+    end
+
+    -- 截图目录和文件路径
+    local screenshotDir = "../../" .. platform .. "/Screenshots"
+    local screenshotPath = screenshotDir .. "/" .. screenshotName .. ".png"
+
+    console.log("Taking screenshot: " .. screenshotPath)
+
+    -- 确保目录存在
+    os.execute('mkdir "' .. screenshotDir .. '" 2>nul')
+
+    -- 使用 BizHawk 的 client.screenshot(path) 函数
+    local success, result = pcall(function()
+        return _G.client.screenshot(screenshotPath)
+    end)
+
+    if not success then
+        console.log("Failed to take screenshot: " .. tostring(result))
+        httpUtils.sendResponse(httpClient, 500, "Internal Server Error", "application/json",
+            json.encode({error = "Failed to take screenshot", message = tostring(result), path = screenshotPath}))
+        return
+    end
+
+    console.log("Screenshot saved successfully: " .. screenshotPath)
+    httpUtils.sendResponse(httpClient, 200, "OK", "application/json",
+        json.encode({success = true, message = "Screenshot saved", filename = screenshotName .. ".png", path = screenshotPath}))
+end
+
 return ApiHandlers
