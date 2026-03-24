@@ -1,0 +1,59 @@
+# BizHawk 模拟器
+BizHawk-2.11-win-x64/
+
+# ROM 和存档
+*.gba
+*.gbc
+*.gb
+*.nes
+*.sfc
+*.smc
+*.State
+*.sav
+*.srm
+
+# 配置文件（可能含密钥）
+*.ini
+*.json
+*.yml
+*.yaml
+*.properties
+!.gitignore
+
+# Lua 可执行文件和编译产物
+lua5.1/
+*.exe
+*.dll
+
+# 编译的 Lua 脚本（源码在 pokemon-memory-reader）
+pokemon-memory-reader/pokemon-memory-reader.lua
+
+# Java
+*.class
+*.jar
+*.war
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temp
+*.tmp
+*.temp
+*.bak
