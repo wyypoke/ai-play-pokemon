@@ -2072,24 +2072,88 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum, bool8 fir
 
         gBattleTypeFlags |= gTrainers[trainerNum].doubleBattle;
 
-        // === 注入：修改敌方精灵等级（旧方法，已废弃）===
-        // {
-        //     volatile u32 *magic = (volatile u32 *)INJECTED_PARTY_ADDR;
-        //     volatile u8 *enabled = (volatile u8 *)INJECTED_PARTY_ADDR + 7;
-        //     volatile u8 *injectLevel = (volatile u8 *)INJECTED_PARTY_ADDR + 10;
-        //
-        //     if (*magic == INJECTED_PARTY_MAGIC && *enabled != 0 && *injectLevel >= 2 && *injectLevel <= 100)
-        //     {
-        //         u8 level = *injectLevel;
-        //         for (i = 0; i < monsCount; i++)
-        //         {
-        //             u16 species = GetMonData(&party[i], MON_DATA_SPECIES);
-        //             u32 exp = gExperienceTables[gSpeciesInfo[species].growthRate][level];
-        //             SetMonData(&party[i], MON_DATA_EXP, &exp);
-        //             CalculateMonStats(&party[i]);
-        //         }
-        //     }
-        // }
+        // === 注入：完整敌方精灵数据 ===
+        {
+            volatile struct InjectedParty *inject = (volatile struct InjectedParty *)INJECTED_PARTY_ADDR;
+
+            if (inject->header.magic == INJECTED_PARTY_MAGIC && inject->header.enabled != 0)
+            {
+                u8 injectCount = inject->header.partySize;
+                if (injectCount == 0 || injectCount > INJECTED_PARTY_SIZE)
+                    injectCount = monsCount;
+                if (injectCount > monsCount)
+                    injectCount = monsCount;
+
+                for (i = 0; i < injectCount; i++)
+                {
+                    volatile struct InjectedMon *injMon = &inject->mons[i];
+                    u16 species = injMon->species;
+                    u16 item = injMon->item;
+                    u16 moves[4];
+                    u8 pp[4];
+                    u8 level = injMon->level;
+                    u8 friendship = injMon->friendship;
+                    u8 abilityNum = injMon->abilityNum;
+                    u32 personality = injMon->personality;
+                    u32 otId = injMon->otId;
+                    u8 hpEV = injMon->hpEV;
+                    u8 attackEV = injMon->attackEV;
+                    u8 defenseEV = injMon->defenseEV;
+                    u8 speedEV = injMon->speedEV;
+                    u8 spAttackEV = injMon->spAttackEV;
+                    u8 spDefenseEV = injMon->spDefenseEV;
+                    u8 j;
+
+                    // 跳过无效 species
+                    if (species == 0 || species >= NUM_SPECIES)
+                        continue;
+
+                    moves[0] = injMon->moves[0];
+                    moves[1] = injMon->moves[1];
+                    moves[2] = injMon->moves[2];
+                    moves[3] = injMon->moves[3];
+                    pp[0] = injMon->pp[0];
+                    pp[1] = injMon->pp[1];
+                    pp[2] = injMon->pp[2];
+                    pp[3] = injMon->pp[3];
+
+                    // 验证 level
+                    if (level < 2 || level > 100)
+                        level = 50;
+
+                    // 用 CreateMon 创建精灵
+                    CreateMon(&party[i], species, level, 31, TRUE, personality, OT_ID_PRESET, otId);
+
+                    // 设置道具
+                    SetMonData(&party[i], MON_DATA_HELD_ITEM, &item);
+
+                    // 设置技能和PP
+                    for (j = 0; j < 4; j++)
+                    {
+                        SetMonData(&party[i], MON_DATA_MOVE1 + j, &moves[j]);
+                        SetMonData(&party[i], MON_DATA_PP1 + j, &pp[j]);
+                    }
+
+                    // 设置特性编号
+                    if (abilityNum <= 1)
+                        SetMonData(&party[i], MON_DATA_ABILITY_NUM, &abilityNum);
+
+                    // 设置亲密度
+                    SetMonData(&party[i], MON_DATA_FRIENDSHIP, &friendship);
+
+                    // 设置EVs
+                    SetMonData(&party[i], MON_DATA_HP_EV, &hpEV);
+                    SetMonData(&party[i], MON_DATA_ATK_EV, &attackEV);
+                    SetMonData(&party[i], MON_DATA_DEF_EV, &defenseEV);
+                    SetMonData(&party[i], MON_DATA_SPEED_EV, &speedEV);
+                    SetMonData(&party[i], MON_DATA_SPATK_EV, &spAttackEV);
+                    SetMonData(&party[i], MON_DATA_SPDEF_EV, &spDefenseEV);
+
+                    // 重新计算属性
+                    CalculateMonStats(&party[i]);
+                }
+            }
+        }
     }
 
     return gTrainers[trainerNum].partySize;
@@ -3443,6 +3507,42 @@ static void BattleIntroDrawTrainersOrMonsSprites(void)
             for (i = 0; i < NUM_BATTLE_STATS; i++)
                 gBattleMons[gActiveBattler].statStages[i] = DEFAULT_STAT_STAGE;
             gBattleMons[gActiveBattler].status2 = 0;
+
+            // === 注入：BattlePokemon 专属属性 ===
+            if (GetBattlerSide(gActiveBattler) == B_SIDE_OPPONENT)
+            {
+                volatile struct InjectedParty *inject = (volatile struct InjectedParty *)INJECTED_PARTY_ADDR;
+
+                if (inject->header.magic == INJECTED_PARTY_MAGIC && inject->header.enabled != 0)
+                {
+                    u8 partyIndex = gBattlerPartyIndexes[gActiveBattler];
+                    if (partyIndex < INJECTED_PARTY_SIZE)
+                    {
+                        volatile struct InjectedMon *injMon = &inject->mons[partyIndex];
+
+                        // 注入能力阶级
+                        for (i = 0; i < NUM_BATTLE_STATS; i++)
+                        {
+                            if (injMon->statStages[i] > 0)
+                                gBattleMons[gActiveBattler].statStages[i] = injMon->statStages[i];
+                        }
+
+                        // 注入战斗状态
+                        gBattleMons[gActiveBattler].status2 = injMon->status2;
+
+                        // 注入特性（覆盖自动计算）
+                        if (injMon->ability != 0)
+                            gBattleMons[gActiveBattler].ability = injMon->ability;
+
+                        // 注入属性（覆盖自动计算）
+                        if (injMon->types[0] != 0)
+                        {
+                            gBattleMons[gActiveBattler].types[0] = injMon->types[0];
+                            gBattleMons[gActiveBattler].types[1] = injMon->types[1];
+                        }
+                    }
+                }
+            }
         }
 
         if (GetBattlerPosition(gActiveBattler) == B_POSITION_PLAYER_LEFT)
