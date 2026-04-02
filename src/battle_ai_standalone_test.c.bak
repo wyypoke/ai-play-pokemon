@@ -1,0 +1,449 @@
+/**
+ * 测试用例：双打道馆战 AI决策测试
+ *
+ * 场景描述:
+ *   玩家方（场上）: Absol Lv41 + Pelipper Lv25
+ *   AI方（场上）:   Xatu Lv42 + Claydol Lv42
+ *
+ * 预期结果:
+ *   - Xatu 和 Claydol 都应使用 Psychic 攻击 Pelipper
+ *   - 因为 Absol 是恶系，免疫超能招式
+ *
+ * ============================================================================
+ *                             能力值计算说明
+ * ============================================================================
+ *
+ * 公式: HP = ((2 * 种族值 + IV) * 等级 / 100) + 等级 + 10
+ *       非HP = ((2 * 种族值 + IV) * 等级 / 100) + 5
+ *
+ * 种族值参考 (来自 data/pokemon/base_stats.h):
+ * ┌──────────┬────┬──────┬──────┬──────┬──────┬──────┐
+ * │ 宝可梦   │ HP │ 攻击 │ 防御 │ 特攻 │ 特防 │ 速度 │
+ * ├──────────┼────┼──────┼──────┼──────┼──────┼──────┤
+ * │ Absol    │ 65 │ 130  │ 60   │ 75   │ 60   │ 75   │
+ * │ Pelipper │ 60 │ 50   │ 100  │ 95   │ 70   │ 65   │
+ * │ Xatu     │ 65 │ 75   │ 70   │ 95   │ 70   │ 95   │
+ * │ Claydol  │ 60 │ 70   │ 105  │ 70   │ 120  │ 75   │
+ * └──────────┴────┴──────┴──────┴──────┴──────┴──────┘
+ *
+ * 本测试使用 IV=0（无性格修正）
+ * ============================================================================
+ */
+
+#include "global.h"
+#include "battle_ai_standalone.h"
+#include "pokemon.h"
+#include "data.h"
+#include <stdio.h>
+#include <string.h>
+
+/**
+ * 调试输出回调函数
+ * 将AI内部日志打印到控制台
+ */
+static void DebugPrint(const char* message) {
+    printf("%s", message);
+}
+
+/**
+ * 计算HP能力值
+ *
+ * @param species 种族ID (如 SPECIES_ABSOL)
+ * @param level   等级 (1-100)
+ * @param iv      个体值 (0-31，本测试使用0)
+ * @return        HP能力值
+ *
+ * 公式: HP = ((2 * baseHP + IV) * level / 100) + level + 10
+ *
+ * 示例 - Absol Lv41 (baseHP=65, IV=0):
+ *   HP = ((2*65 + 0)*41/100) + 41 + 10
+ *      = (130*41/100) + 51
+ *      = 53 + 51
+ *      = 104
+ */
+static u16 CalcHP(u16 species, u8 level, u8 iv) {
+    u8 base = gSpeciesInfo[species].baseHP;
+    return (u16)(((2 * base + iv) * level) / 100 + level + 10);
+}
+
+/**
+ * 计算非HP能力值（攻击/防御/速度/特攻/特防）
+ *
+ * @param species    种族ID
+ * @param level      等级
+ * @param statIndex  能力索引: 1=攻击, 2=防御, 3=特攻, 4=特防, 5=速度
+ * @param iv         个体值 (0-31，本测试使用0)
+ * @return           能力值
+ *
+ * 公式: 非HP = ((2 * baseStat + IV) * level / 100) + 5
+ * 注: 本测试不考虑性格修正
+ *
+ * 示例 - Absol Lv41 攻击 (baseAtk=130, IV=0):
+ *   攻击 = ((2*130 + 0)*41/100) + 5
+ *        = (260*41/100) + 5
+ *        = 106 + 5
+ *        = 111
+ */
+static u16 CalcStat(u16 species, u8 level, int statIndex, u8 iv) {
+    u8 base;
+    switch (statIndex) {
+        case 1: base = gSpeciesInfo[species].baseAttack; break;   // 攻击
+        case 2: base = gSpeciesInfo[species].baseDefense; break;  // 防御
+        case 3: base = gSpeciesInfo[species].baseSpAttack; break;  // 特攻
+        case 4: base = gSpeciesInfo[species].baseSpDefense; break; // 特防
+        case 5: base = gSpeciesInfo[species].baseSpeed; break;     // 速度
+        default: return 0;
+    }
+    return (u16)(((2 * base + iv) * level) / 100 + 5);
+}
+
+/**
+ * 双打道馆战测试
+ *
+ * 场地布局:
+ *         玩家侧
+ *     ┌─────────────────┐
+ *     │ Pelipper(3)     │  玩家右 - Lv25
+ *     │ Absol(1)        │  玩家左 - Lv41
+ *     ├─────────────────┤
+ *     │ Xatu(0)         │  敌方左 - Lv42 (AI控制)
+ *     │ Claydol(2)      │  敌方右 - Lv42 (AI控制)
+ *     └─────────────────┘
+ *         敌方侧
+ *
+ * Battler ID 映射:
+ *   0 = 敌方左侧 (Xatu)
+ *   1 = 玩家左侧 (Absol)
+ *   2 = 敌方右侧 (Claydol)
+ *   3 = 玩家右侧 (Pelipper)
+ */
+void TestGymDoubleBattle(void) {
+    AIInput input = {0};
+
+    // ========================================================================
+    //                         战斗基础设置
+    // ========================================================================
+    input.isDoubleBattle = TRUE;    // 双打战斗
+    input.isTrainerBattle = TRUE;   // 训练家对战（非野生）
+    input.rngSeed = 12345;          // 固定随机种子，确保结果可复现
+
+    AI_SetDebugCallback(DebugPrint);  // 启用调试输出
+
+    // ========================================================================
+    //                    玩家方 - Absol (battler 1)
+    // ========================================================================
+    // 种族: Absol (恶系)
+    // 等级: 41
+    // 特性: Pressure (给对手招式增加PP消耗)
+    // 招式: Shadow Ball (幽灵系特攻), Swords Dance (攻击+2)
+    //
+    // 关键属性相克:
+    //   - 超能系招式对 Absol 无效（恶系免疫）
+    //   - 这导致 AI 的 Psychic 只能攻击 Pelipper
+    // ========================================================================
+    u16 absolSpecies = SPECIES_ABSOL;
+    u8 absolLevel = 41;
+    u16 absolHP = CalcHP(absolSpecies, absolLevel, 0);  // 计算: 104
+
+    // 玩家队伍位置 0 (用于换人决策时判断队伍状态)
+    input.playerParty[0] = (AIPartyMon){
+        .species = absolSpecies,
+        .level = absolLevel,
+        .hp = absolHP,          // 104
+        .maxHP = absolHP,       // 104
+        .moves = {MOVE_SHADOW_BALL, MOVE_SWORDS_DANCE, MOVE_NONE, MOVE_NONE},
+        .ability = ABILITY_PRESSURE,
+        .types = {TYPE_DARK, TYPE_DARK},  // 纯恶系
+        .isAlive = TRUE,
+    };
+
+    // 场上 battler 1 (玩家左侧)
+    input.battlers[1] = (AIBattlerInput){
+        .species = absolSpecies,
+        .level = absolLevel,
+        .hp = absolHP,          // 104
+        .maxHP = absolHP,       // 104
+        .moves = {MOVE_SHADOW_BALL, MOVE_SWORDS_DANCE, MOVE_NONE, MOVE_NONE},
+        // PP 值来自 include/constants/moves_info.h:
+        //   Shadow Ball: 15 PP
+        //   Swords Dance: 20 PP
+        .pp = {15, 20, 0, 0},
+        .ability = ABILITY_PRESSURE,
+        .types = {TYPE_DARK, TYPE_DARK},
+        .item = ITEM_NONE,
+        // 能力值通过 CalcStat 自动计算:
+        .attack = CalcStat(absolSpecies, absolLevel, 1, 0),   // 111
+        .defense = CalcStat(absolSpecies, absolLevel, 2, 0),  // 54
+        .speed = CalcStat(absolSpecies, absolLevel, 5, 0),    // 66
+        .spAttack = CalcStat(absolSpecies, absolLevel, 3, 0), // 66
+        .spDefense = CalcStat(absolSpecies, absolLevel, 4, 0),// 54
+        // statStages: 能力等级修正
+        // 索引: [0]=攻击, [1]=防御, [2]=速度, [3]=特攻, [4]=特防, [5]=命中, [6]=闪避
+        // 值: 6 = 正常 (0级修正), 7 = +1级, 5 = -1级
+        .statStages = {6, 6, 6, 6, 6, 6, 6, 6},  // 全部正常
+    };
+
+    // ========================================================================
+    //                    玩家方 - Pelipper (battler 3)
+    // ========================================================================
+    // 种族: Pelipper (水/飞行)
+    // 等级: 25 (较低，可能是辅助手)
+    // 特性: Keen Eye (命中率不会被降低)
+    // 招式: Protect (防御), Surf (水系AOE), Fly (飞行系两回合)
+    //
+    // 关键属性相克:
+    //   - 飞行系免疫地面招式 (Earthquake 无效)
+    //   - 超能系招式正常伤害 (无克制关系)
+    //   - 是 AI 的 Psychic 唯一有效目标 (因为 Absol 免疫)
+    // ========================================================================
+    u16 pelipperSpecies = SPECIES_PELIPPER;
+    u8 pelipperLevel = 25;
+    u16 pelipperHP = CalcHP(pelipperSpecies, pelipperLevel, 0);  // 计算: 45
+
+    // 玩家队伍位置 1
+    input.playerParty[1] = (AIPartyMon){
+        .species = pelipperSpecies,
+        .level = pelipperLevel,
+        .hp = pelipperHP,
+        .maxHP = pelipperHP,
+        .moves = {MOVE_PROTECT, MOVE_SURF, MOVE_FLY, MOVE_NONE},
+        .ability = ABILITY_KEEN_EYE,
+        .types = {TYPE_WATER, TYPE_FLYING},
+        .isAlive = TRUE,
+    };
+
+    // 场上 battler 3 (玩家右侧)
+    input.battlers[3] = (AIBattlerInput){
+        .species = pelipperSpecies,
+        .level = pelipperLevel,
+        .hp = pelipperHP,
+        .maxHP = pelipperHP,
+        .moves = {MOVE_PROTECT, MOVE_SURF, MOVE_FLY, MOVE_NONE},
+        // PP 值:
+        //   Protect: 10 PP
+        //   Surf: 15 PP
+        //   Fly: 15 PP
+        .pp = {10, 15, 15, 0},
+        .ability = ABILITY_KEEN_EYE,
+        .types = {TYPE_WATER, TYPE_FLYING},
+        .item = ITEM_NONE,
+        .attack = CalcStat(pelipperSpecies, pelipperLevel, 1, 0),   // 30
+        .defense = CalcStat(pelipperSpecies, pelipperLevel, 2, 0),  // 55
+        .speed = CalcStat(pelipperSpecies, pelipperLevel, 5, 0),    // 37
+        .spAttack = CalcStat(pelipperSpecies, pelipperLevel, 3, 0), // 52
+        .spDefense = CalcStat(pelipperSpecies, pelipperLevel, 4, 0),// 42
+        .statStages = {6, 6, 6, 6, 6, 6, 6, 6},
+    };
+
+    // ========================================================================
+    //                    AI方 - Xatu (battler 0)
+    // ========================================================================
+    // 种族: Xatu (超能/飞行)
+    // 等级: 42
+    // 特性: Synchronize (受到异常状态时，对手也会受到相同状态)
+    // 招式: Calm Mind (特攻/特防+1), Psychic (超能系特攻),
+    //       Confuse Ray (混乱), Sunny Day (大晴天)
+    //
+    // 决策逻辑:
+    //   - Psychic 对 Absol 无效 (恶系免疫)
+    //   - Psychic 对 Pelipper 有效
+    //   - 应选择 Psychic 攻击 Pelipper
+    // ========================================================================
+    u16 xatuSpecies = SPECIES_XATU;
+    u8 xatuLevel = 42;
+    u16 xatuHP = CalcHP(xatuSpecies, xatuLevel, 0);  // 计算: 106
+
+    // AI队伍位置 0
+    input.aiParty[0] = (AIPartyMon){
+        .species = xatuSpecies,
+        .level = xatuLevel,
+        .hp = xatuHP,
+        .maxHP = xatuHP,
+        .moves = {MOVE_CALM_MIND, MOVE_PSYCHIC, MOVE_CONFUSE_RAY, MOVE_SUNNY_DAY},
+        .ability = ABILITY_SYNCHRONIZE,
+        .types = {TYPE_PSYCHIC, TYPE_FLYING},
+        .isAlive = TRUE,
+    };
+
+    // 场上 battler 0 (敌方左侧)
+    input.battlers[0] = (AIBattlerInput){
+        .species = xatuSpecies,
+        .level = xatuLevel,
+        .hp = xatuHP,
+        .maxHP = xatuHP,
+        .moves = {MOVE_CALM_MIND, MOVE_PSYCHIC, MOVE_CONFUSE_RAY, MOVE_SUNNY_DAY},
+        // PP 值:
+        //   Calm Mind: 20 PP
+        //   Psychic: 10 PP
+        //   Confuse Ray: 10 PP
+        //   Sunny Day: 5 PP
+        .pp = {20, 10, 10, 5},
+        .ability = ABILITY_SYNCHRONIZE,
+        .types = {TYPE_PSYCHIC, TYPE_FLYING},
+        .item = ITEM_NONE,
+        .attack = CalcStat(xatuSpecies, xatuLevel, 1, 0),   // 68
+        .defense = CalcStat(xatuSpecies, xatuLevel, 2, 0),  // 63
+        .speed = CalcStat(xatuSpecies, xatuLevel, 5, 0),    // 84
+        .spAttack = CalcStat(xatuSpecies, xatuLevel, 3, 0), // 84
+        .spDefense = CalcStat(xatuSpecies, xatuLevel, 4, 0),// 63
+        .statStages = {6, 6, 6, 6, 6, 6, 6, 6},
+    };
+
+    // Xatu 首回合状态效果
+    // isFirstTurn = TRUE 表示首次登场，可能影响AI决策
+    input.effects[0] = (AIBattlerEffects){ .isFirstTurn = TRUE };
+
+    // ========================================================================
+    //                    AI方 - Claydol (battler 2)
+    // ========================================================================
+    // 种族: Claydol (地面/超能)
+    // 等级: 42
+    // 特性: Levitate (免疫地面招式)
+    // 招式: Ancient Power (岩石系, 全能力+10%), Psychic (超能系特攻),
+    //       Earthquake (地面系AOE), Light Screen (特防壁)
+    //
+    // 决策逻辑:
+    //   - Earthquake 会击中队友 Xatu (无漂浮特性)
+    //   - 但有 AI_SCRIPT_DOUBLE_BATTLE 标志，AI会避免误伤队友
+    //   - Psychic 对 Absol 无效，只能攻击 Pelipper
+    //   - 应选择 Psychic 攻击 Pelipper
+    // ========================================================================
+    u16 claydolSpecies = SPECIES_CLAYDOL;
+    u8 claydolLevel = 42;
+    u16 claydolHP = CalcHP(claydolSpecies, claydolLevel, 0);  // 计算: 100
+
+    // AI队伍位置 1
+    input.aiParty[1] = (AIPartyMon){
+        .species = claydolSpecies,
+        .level = claydolLevel,
+        .hp = claydolHP,
+        .maxHP = claydolHP,
+        .moves = {MOVE_ANCIENT_POWER, MOVE_PSYCHIC, MOVE_EARTHQUAKE, MOVE_LIGHT_SCREEN},
+        .ability = ABILITY_LEVITATE,
+        .types = {TYPE_GROUND, TYPE_PSYCHIC},
+        .isAlive = TRUE,
+    };
+
+    // 场上 battler 2 (敌方右侧)
+    input.battlers[2] = (AIBattlerInput){
+        .species = claydolSpecies,
+        .level = claydolLevel,
+        .hp = claydolHP,
+        .maxHP = claydolHP,
+        .moves = {MOVE_ANCIENT_POWER, MOVE_PSYCHIC, MOVE_EARTHQUAKE, MOVE_LIGHT_SCREEN},
+        // PP 值:
+        //   Ancient Power: 5 PP
+        //   Psychic: 10 PP
+        //   Earthquake: 10 PP
+        //   Light Screen: 30 PP
+        .pp = {5, 10, 10, 30},
+        .ability = ABILITY_LEVITATE,
+        .types = {TYPE_GROUND, TYPE_PSYCHIC},
+        .item = ITEM_NONE,
+        .attack = CalcStat(claydolSpecies, claydolLevel, 1, 0),   // 63
+        .defense = CalcStat(claydolSpecies, claydolLevel, 2, 0),  // 88
+        .speed = CalcStat(claydolSpecies, claydolLevel, 5, 0),    // 63
+        .spAttack = CalcStat(claydolSpecies, claydolLevel, 3, 0), // 63
+        .spDefense = CalcStat(claydolSpecies, claydolLevel, 4, 0),// 100
+        .statStages = {6, 6, 6, 6, 6, 6, 6, 6},
+    };
+
+    // Claydol 首回合状态效果
+    input.effects[2] = (AIBattlerEffects){ .isFirstTurn = TRUE };
+
+    // ========================================================================
+    //                         队伍位置映射
+    // ========================================================================
+    // 双打时需要明确场上 battler 对应队伍中的哪个位置
+    // 这样换人决策才能正确识别场上/场下宝可梦
+    // ========================================================================
+    input.aiBattlerPartyIndex[0] = 0;      // Xatu (battler 0) -> AI队伍位置 0
+    input.aiBattlerPartyIndex[1] = 1;      // Claydol (battler 2) -> AI队伍位置 1
+    input.playerBattlerPartyIndex[0] = 0;  // Absol (battler 1) -> 玩家队伍位置 0
+    input.playerBattlerPartyIndex[1] = 1;  // Pelipper (battler 3) -> 玩家队伍位置 1
+
+    // ========================================================================
+    //                         训练家AI标志
+    // ========================================================================
+    // AI_SCRIPT_CHECK_BAD_MOVE: 避免使用无效招式
+    // AI_SCRIPT_TRY_TO_FAINT:   尝试击倒对手
+    // AI_SCRIPT_CHECK_VIABILITY: 检查招式可行性
+    // AI_SCRIPT_DOUBLE_BATTLE:  双打专用逻辑（避免误伤队友等）
+    // ========================================================================
+    input.trainer.aiFlags = AI_SCRIPT_CHECK_BAD_MOVE |
+                            AI_SCRIPT_TRY_TO_FAINT |
+                            AI_SCRIPT_CHECK_VIABILITY |
+                            AI_SCRIPT_DOUBLE_BATTLE;
+
+    // ========================================================================
+    //                         初始化并执行测试
+    // ========================================================================
+    AI_SetupFromInput(&input);
+
+    printf("========== 双打道馆战 AI决策测试 ==========\n\n");
+    printf("玩家方: Absol Lv41 + Pelipper Lv25\n");
+    printf("AI方:   Xatu Lv42 + Claydol Lv42\n\n");
+
+    // ========================================================================
+    //                    Xatu 决策 (battler 0)
+    // ========================================================================
+    // 预期: Psychic -> Pelipper (battler 3)
+    // 原因: Absol 是恶系，免疫超能招式
+    // ========================================================================
+    printf("---------- Xatu 决策 ----------\n");
+    AI_SetActiveBattler(0);
+    AICompleteDecision result1 = AI_MakeCompleteDecision();
+
+    printf("\n[结果] ");
+    if (result1.action == B_ACTION_USE_MOVE) {
+        u16 move = input.battlers[0].moves[result1.moveIndex];
+        printf("招式: %d (%s) -> 目标: %d\n",
+               result1.moveIndex, AI_GetMoveName(move), result1.target);
+        printf("分数: [%d, %d, %d, %d]\n",
+               result1.scores[0], result1.scores[1], result1.scores[2], result1.scores[3]);
+
+        // 验证结果
+        if (result1.moveIndex == 1 && result1.target == 3) {
+            printf("[验证通过] Xatu 正确选择 Psychic 攻击 Pelipper\n");
+        } else {
+            printf("[验证失败] 预期: 招式1(Psychic) -> 目标3(Pelipper)\n");
+        }
+    }
+
+    // ========================================================================
+    //                    Claydol 决策 (battler 2)
+    // ========================================================================
+    // 预期: Psychic -> Pelipper (battler 3)
+    // 原因: 同 Xatu，Absol 免疫超能招式
+    // ========================================================================
+    printf("\n---------- Claydol 决策 ----------\n");
+    AI_SetActiveBattler(2);
+    AICompleteDecision result2 = AI_MakeCompleteDecision();
+
+    printf("\n[结果] ");
+    if (result2.action == B_ACTION_USE_MOVE) {
+        u16 move = input.battlers[2].moves[result2.moveIndex];
+        printf("招式: %d (%s) -> 目标: %d\n",
+               result2.moveIndex, AI_GetMoveName(move), result2.target);
+        printf("分数: [%d, %d, %d, %d]\n",
+               result2.scores[0], result2.scores[1], result2.scores[2], result2.scores[3]);
+
+        // 验证结果
+        if (result2.moveIndex == 1 && result2.target == 3) {
+            printf("[验证通过] Claydol 正确选择 Psychic 攻击 Pelipper\n");
+        } else {
+            printf("[验证失败] 预期: 招式1(Psychic) -> 目标3(Pelipper)\n");
+        }
+    }
+
+    printf("\n==========================================\n");
+}
+
+/**
+ * 主函数
+ * 运行双打道馆战测试
+ */
+int main(void) {
+    TestGymDoubleBattle();
+    return 0;
+}

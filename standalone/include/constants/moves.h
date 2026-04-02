@@ -1,0 +1,25 @@
+/**
+ * AI Standalone - constants/moves.h 模拟
+ */
+
+#ifndef GUARD_CONSTANTS_MOVES_H
+#define GUARD_CONSTANTS_MOVES_H
+
+#define MOVE_NONE 0
+#define MOVE_STRUGGLE 165
+
+// 一些常用招式
+#define MOVE_PSYCHIC 94
+#define MOVE_EARTHQUAKE 89
+#define MOVE_SHADOW_BALL 247
+#define MOVE_SWORDS_DANCE 14
+#define MOVE_CALM_MIND 347
+#define MOVE_CONFUSE_RAY 109
+#define MOVE_SUNNY_DAY 241
+#define MOVE_ANCIENT_POWER 246
+#define MOVE_LIGHT_SCREEN 113
+#define MOVE_PROTECT 182
+#define MOVE_SURF 57
+#define MOVE_FLY 19
+
+#endif // GUARD_CONSTANTS_MOVES_H
