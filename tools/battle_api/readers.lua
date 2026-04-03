@@ -305,12 +305,10 @@ function Readers.isDoubleBattle()
     return (flags & 0x01) ~= 0
 end
 
--- Get battle phase (requires game mod)
+-- Get battle phase from game memory
 function Readers.getBattlePhase()
-    if not Readers.isInBattle() then
-        return Config.BATTLE_PHASE.NONE
-    end
-    return Config.BATTLE_PHASE.ACTION_SELECT
+    local addr = Config.ADDRESS.ActionInjectData
+    return read_u8(addr + Config.ACTION_INJECT.offset.battlePhase)
 end
 
 

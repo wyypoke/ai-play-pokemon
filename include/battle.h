@@ -739,18 +739,29 @@ struct SingleActionData {
     u8 switchMonId;      // 切换的宝可梦队伍索引
 };
 
+// 战斗阶段定义
+#define BATTLE_PHASE_NONE           0  // 不在战斗中
+#define BATTLE_PHASE_INTRO          1  // 战斗开场
+#define BATTLE_PHASE_ACTION_SELECT  2  // 行动选择
+#define BATTLE_PHASE_MOVE_EXECUTION 3  // 招式执行
+#define BATTLE_PHASE_FAINT_SWITCH   4  // 濒死替换
+#define BATTLE_PHASE_END            5  // 战斗结束
+
 // 完整注入数据（支持双打）
 struct ActionInjectData {
     u32 magic;           // 魔术数字
     u8 enabled;          // 启用标志
     u8 waiting;          // 等待指令标志
-    u8 reserved[2];      // 对齐
+    u8 doubleBattleTracker;  // 双打槽位追踪 (原 reserved[0])
+    u8 battlePhase;      // 战斗阶段标志
     struct SingleActionData actions[2];  // [0]=左侧宝可梦, [1]=右侧宝可梦
 };
 
 bool8 TryGetInjectedActionType(u8 battler, u8 *action);
 bool8 TryGetInjectedMove(u8 battler, u8 *action, u16 *param);
 bool8 TryGetInjectedSwitch(u8 battler, u8 *partyId);
+void SetBattlePhase(u8 phase);
+u8 GetBattlePhase(void);
 // ==================================
 
 #endif // GUARD_BATTLE_H

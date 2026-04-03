@@ -3465,6 +3465,7 @@ static void BattleIntroPrepareBackgroundSlide(void)
 {
     if (gBattleControllerExecFlags == 0)
     {
+        SetBattlePhase(BATTLE_PHASE_INTRO);
         gActiveBattler = GetBattlerAtPosition(0);
         BtlController_EmitIntroSlide(B_COMM_TO_CONTROLLER, gBattleEnvironment);
         MarkBattlerForControllerExec(gActiveBattler);
@@ -4249,6 +4250,8 @@ enum
 static void HandleTurnActionSelectionState(void)
 {
     s32 i;
+
+    SetBattlePhase(BATTLE_PHASE_ACTION_SELECT);
 
     gBattleCommunication[ACTIONS_CONFIRMED_COUNT] = 0;
     for (gActiveBattler = 0; gActiveBattler < gBattlersCount; gActiveBattler++)
@@ -5056,6 +5059,8 @@ static void CheckFocusPunch_ClearVarsBeforeTurnStarts(void)
 
 static void RunTurnActionsFunctions(void)
 {
+    SetBattlePhase(BATTLE_PHASE_MOVE_EXECUTION);
+
     if (gBattleOutcome != 0)
         gCurrentActionFuncId = B_ACTION_FINISHED;
 
@@ -5217,6 +5222,8 @@ static void HandleEndTurn_MonFled(void)
 
 static void HandleEndTurn_FinishBattle(void)
 {
+    SetBattlePhase(BATTLE_PHASE_END);
+
     if (gCurrentActionFuncId == B_ACTION_TRY_FINISH || gCurrentActionFuncId == B_ACTION_FINISHED)
     {
         if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK
@@ -5336,6 +5343,8 @@ static void WaitForEvoSceneToFinish(void)
 
 static void ReturnFromBattleToOverworld(void)
 {
+    SetBattlePhase(BATTLE_PHASE_NONE);
+
     if (!(gBattleTypeFlags & BATTLE_TYPE_LINK))
     {
         RandomlyGivePartyPokerus(gPlayerParty);

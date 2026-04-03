@@ -3264,6 +3264,9 @@ static void Cmd_getexp(void)
     gBattlerFainted = GetBattlerForBattleScript(gBattlescriptCurrInstr[1]);
     sentIn = gSentPokesToOpponent[(gBattlerFainted & 2) >> 1];
 
+    // 跳过经验值分配
+    gBattleScripting.getexpState = 6;
+
     switch (gBattleScripting.getexpState)
     {
     case 0: // check if should receive exp at all
@@ -4868,6 +4871,8 @@ static void Cmd_openpartyscreen(void)
     u8 hitmarkerFaintBits;
     u8 battler;
     const u8 *jumpPtr;
+
+    SetBattlePhase(BATTLE_PHASE_FAINT_SWITCH);
 
     battler = 0;
     flags = 0;

@@ -37,11 +37,12 @@ Config.BATTLE_MON = {
 Config.ACTION_INJECT = {
     magic   = 0xDEADBEEF,
     offset = {
-        magic    = 0x00,  -- u32
-        enabled  = 0x04,  -- u8
-        waiting  = 0x05,  -- u8
-        reserved = 0x06,  -- u8[2]
-        actions  = 0x08,  -- SingleActionData[2]
+        magic              = 0x00,  -- u32
+        enabled            = 0x04,  -- u8
+        waiting            = 0x05,  -- u8
+        doubleBattleTracker = 0x06, -- u8
+        battlePhase        = 0x07,  -- u8
+        actions            = 0x08,  -- SingleActionData[2]
     },
     actionSize = 4,
     actionOffset = {
@@ -62,11 +63,12 @@ Config.B_ACTION = {
 
 -- Battle phase constants
 Config.BATTLE_PHASE = {
-    NONE          = 0,
-    ACTION_SELECT = 1,
-    TEXT_WAIT     = 2,
-    FORCED_SWITCH = 3,
-    BATTLE_END    = 4,
+    NONE           = 0,  -- 不在战斗中
+    INTRO          = 1,  -- 战斗开场
+    ACTION_SELECT  = 2,  -- 行动选择
+    MOVE_EXECUTION = 3,  -- 招式执行
+    FAINT_SWITCH   = 4,  -- 濒死替换
+    END            = 5,  -- 战斗结束
 }
 
 -- Server configuration

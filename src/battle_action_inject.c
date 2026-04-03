@@ -14,6 +14,20 @@ static struct ActionInjectData *GetActionInjectData(void)
     return (struct ActionInjectData *)0x0203D200;
 }
 
+// 设置战斗阶段
+void SetBattlePhase(u8 phase)
+{
+    struct ActionInjectData *data = GetActionInjectData();
+    data->battlePhase = phase;
+}
+
+// 获取战斗阶段
+u8 GetBattlePhase(void)
+{
+    struct ActionInjectData *data = GetActionInjectData();
+    return data->battlePhase;
+}
+
 // 获取玩家位置索引 (0=左侧, 1=右侧)
 static u8 GetPlayerSlotIndex(u8 battler)
 {
@@ -116,13 +130,27 @@ bool8 TryGetInjectedMove(u8 battler, u8 *action, u16 *param)
     *action = B_ACTION_EXEC_SCRIPT;  // 10
     *param = slotData->moveIndex | (slotData->target << 8);
 
-    // 清除标志
-    data->enabled = FALSE;
+    // 清除标志（单打直接清除，双打需要两个都处理完）
+    if (!IsDoubleBattle())
+    {
+        data->enabled = FALSE;
+    }
+    else
+    {
+        // 双打：使用 doubleBattleTracker 标记已处理的槽位
+        data->doubleBattleTracker |= (1 << slotIndex);
+        // 两个槽位都处理完后清除
+        if ((data->doubleBattleTracker & 0x03) == 0x03)
+        {
+            data->enabled = FALSE;
+            data->doubleBattleTracker = 0;
+        }
+    }
 
     return TRUE;
 }
 
-// 尝试获取注入的切换选择
+// 尝试获取注入的切换选择（用于 WaitForMonSelection）
 bool8 TryGetInjectedSwitch(u8 battler, u8 *partyId)
 {
     struct ActionInjectData *data;
@@ -151,8 +179,20 @@ bool8 TryGetInjectedSwitch(u8 battler, u8 *partyId)
 
     *partyId = slotData->switchMonId;
 
-    // 清除标志
-    data->enabled = FALSE;
+    // 清除标志（单打直接清除，双打需要两个都处理完）
+    if (!IsDoubleBattle())
+    {
+        data->enabled = FALSE;
+    }
+    else
+    {
+        data->doubleBattleTracker |= (1 << slotIndex);
+        if ((data->doubleBattleTracker & 0x03) == 0x03)
+        {
+            data->enabled = FALSE;
+            data->doubleBattleTracker = 0;
+        }
+    }
 
     return TRUE;
 }
