@@ -132,15 +132,22 @@ local function readBattlePokemon(baseAddr)
     }
 
     mon.pp = {
-        read_u8(baseAddr + 0x14),
-        read_u8(baseAddr + 0x15),
-        read_u8(baseAddr + 0x16),
-        read_u8(baseAddr + 0x17)
+        read_u8(baseAddr + 0x24),
+        read_u8(baseAddr + 0x25),
+        read_u8(baseAddr + 0x26),
+        read_u8(baseAddr + 0x27)
+    }
+
+    mon.ability = read_u8(baseAddr + 0x20)
+    mon.types = {
+        read_u8(baseAddr + 0x21),
+        read_u8(baseAddr + 0x22)
     }
 
     mon.hp = read_u16(baseAddr + 0x28)
-    mon.maxHp = read_u16(baseAddr + 0x2C)
     mon.level = read_u8(baseAddr + 0x2A)
+    mon.maxHp = read_u16(baseAddr + 0x2C)
+    mon.item = read_u16(baseAddr + 0x2E)
 
     return mon
 end
@@ -229,6 +236,9 @@ local function readPartyPokemon(baseAddr, slot)
             spAttack = get_bits(misc2, 20, 5),
             spDefense = get_bits(misc2, 25, 5)
         },
+
+        isEgg = get_bits(misc2, 30, 1),
+        abilityNum = get_bits(misc2, 31, 1),
 
         -- Current stats (not encrypted, at end of structure)
         level = read_u8(pokemonStart + 84),
