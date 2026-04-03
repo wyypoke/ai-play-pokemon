@@ -233,6 +233,16 @@ static void CompleteOnBankSpritePosX_0(void)
 static void HandleInputChooseAction(void)
 {
     u16 itemId = gBattleBufferA[gActiveBattler][2] | (gBattleBufferA[gActiveBattler][3] << 8);
+    u8 injectedAction;
+
+    // ========== 新增：检查外部注入（阶段1：行动类型）==========
+    if (TryGetInjectedActionType(gActiveBattler, &injectedAction))
+    {
+        BtlController_EmitTwoReturnValues(B_COMM_TO_ENGINE, injectedAction, 0);
+        PlayerBufferExecCompleted();
+        return;
+    }
+    // ===========================================================
 
     DoBounceEffect(gActiveBattler, BOUNCE_HEALTHBOX, 7, 1);
     DoBounceEffect(gActiveBattler, BOUNCE_MON, 7, 1);
@@ -472,6 +482,17 @@ static void HandleInputChooseMove(void)
 {
     bool32 canSelectTarget = FALSE;
     struct ChooseMoveStruct *moveInfo = (struct ChooseMoveStruct *)(&gBattleBufferA[gActiveBattler][4]);
+    u8 injectedAction;
+    u16 injectedParam;
+
+    // ========== 新增：检查外部注入（阶段2：具体招式）==========
+    if (TryGetInjectedMove(gActiveBattler, &injectedAction, &injectedParam))
+    {
+        BtlController_EmitTwoReturnValues(B_COMM_TO_ENGINE, injectedAction, injectedParam);
+        PlayerBufferExecCompleted();
+        return;
+    }
+    // ==========================================================
 
     if (JOY_HELD(DPAD_ANY) && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_L_EQUALS_A)
         gPlayerDpadHoldFrames++;
@@ -1358,6 +1379,17 @@ static void OpenPartyMenuToChooseMon(void)
 
 static void WaitForMonSelection(void)
 {
+    u8 injectedPartyId;
+
+    // ========== 新增：检查外部注入 ==========
+    if (TryGetInjectedSwitch(gActiveBattler, &injectedPartyId))
+    {
+        BtlController_EmitChosenMonReturnValue(B_COMM_TO_ENGINE, injectedPartyId, gBattlePartyCurrentOrder);
+        PlayerBufferExecCompleted();
+        return;
+    }
+    // ========================================
+
     if (gMain.callback2 == BattleMainCB2 && !gPaletteFade.active)
     {
         if (gPartyMenuUseExitCallback == TRUE)

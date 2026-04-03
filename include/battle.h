@@ -727,4 +727,30 @@ extern u8 gMultiUsePlayerCursor;
 extern u8 gNumberOfMovesToChoose;
 extern u8 gBattleControllerData[MAX_BATTLERS_COUNT];
 
+// ========== 外部行动注入 ==========
+#define ACTION_INJECT_ADDR     0x0203D200
+#define ACTION_INJECT_MAGIC    0xDEADBEEF
+
+// 单个行动数据
+struct SingleActionData {
+    u8 action;           // B_ACTION_* (0=招式, 2=切换)
+    u8 moveIndex;        // 招式索引 (0-3)
+    u8 target;           // 目标battler
+    u8 switchMonId;      // 切换的宝可梦队伍索引
+};
+
+// 完整注入数据（支持双打）
+struct ActionInjectData {
+    u32 magic;           // 魔术数字
+    u8 enabled;          // 启用标志
+    u8 waiting;          // 等待指令标志
+    u8 reserved[2];      // 对齐
+    struct SingleActionData actions[2];  // [0]=左侧宝可梦, [1]=右侧宝可梦
+};
+
+bool8 TryGetInjectedActionType(u8 battler, u8 *action);
+bool8 TryGetInjectedMove(u8 battler, u8 *action, u16 *param);
+bool8 TryGetInjectedSwitch(u8 battler, u8 *partyId);
+// ==================================
+
 #endif // GUARD_BATTLE_H
