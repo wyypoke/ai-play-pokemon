@@ -3,6 +3,7 @@
 
 local Config = require("config")
 local Api = require("api")
+local Readers = require("readers")
 
 local Server = {}
 
@@ -89,6 +90,9 @@ end
 -- Update server (call each frame)
 function Server.update()
     if not isRunning or not server then return end
+
+    -- Update log history every frame
+    Readers.updateLog()
 
     -- Accept new connections
     local client = server:accept()

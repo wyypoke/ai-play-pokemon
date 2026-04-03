@@ -10,7 +10,7 @@ Config.ADDRESS = {
     gPlayerParty       = 0x020244EC,
     gEnemyParty        = 0x02024744,
     ActionInjectData   = 0x0203D200,
-    gDisplayedStringBattle = 0x02021DCC,  -- needs verification
+    gDisplayedStringBattle = 0x02022E2C,
 }
 
 -- BattlePokemon structure size and offsets

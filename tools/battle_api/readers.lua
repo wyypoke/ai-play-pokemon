@@ -5,6 +5,32 @@ local Config = require("config")
 
 local Readers = {}
 
+-- Log history storage
+local logState = {
+    history = {},
+    lastText = ""
+}
+
+-- GBA character mapping (Gen3)
+local GBACharmap = {
+    [0] = " ", "À", "Á", "Â", "Ç", "È", "É", "Ê", "Ë", "Ì", "こ", "Î", "Ï", "Ò", "Ó", "Ô",
+    "Œ", "Ù", "Ú", "Û", "Ñ", "ß", "à", "á", "ね", "ç", "è", "é", "ê", "ë", "ì", "ま",
+    "î", "ï", "ò", "ó", "ô", "œ", "ù", "ú", "û", "ñ", "º", "ª", "", "&", "+", "あ",
+    "ぃ", "ぅ", "ぇ", "ぉ", "v", "=", "ょ", "が", "ぎ", "ぐ", "げ", "ご", "ざ", "じ", "ず", "ぜ",
+    "ぞ", "だ", "ぢ", "づ", "で", "ど", "ば", "び", "ぶ", "べ", "ぼ", "ぱ", "ぴ", "ぷ", "ぺ", "ぽ",
+    "っ", "¿", "¡", "Pk", "Mn", "Po", "Ké", "", "", "", "Í", "%", "(", ")", "セ", "ソ",
+    "タ", "チ", "ツ", "テ", "ト", "ナ", "ニ", "ヌ", "â", "ノ", "ハ", "ヒ", "フ", "ヘ", "ホ", "í",
+    "ミ", "ム", "メ", "モ", "ヤ", "ユ", "ヨ", "ラ", "リ", "↑", "↓", "←", "→", "ヲ", "ン", "ァ",
+    "ィ", "ゥ", "ェ", "ォ", "ャ", "ュ", "ョ", "ガ", "ギ", "グ", "ゲ", "ゴ", "ザ", "ジ", "ズ", "ゼ",
+    "ゾ", "ダ", "ヂ", "ヅ", "デ", "ド", "バ", "ビ", "ブ", "ベ", "ボ", "パ", "ピ", "プ", "ペ", "ポ",
+    "ッ", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "!", "?", ".", "-", "・",
+    "…", "\"", "\"", "'", "'", "♂", "♀", "$", ",", "×", "/", "A", "B", "C", "D", "E",
+    "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+    "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
+    "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "▶",
+    ":", "Ä", "Ö", "Ü", "ä", "ö", "ü", "↑", "↓", "←", "", "", "", "", "", ""
+}
+
 -- Helper functions
 local function read_u8(addr)
     return memory.read_u8(addr)
@@ -21,6 +47,60 @@ end
 local function get_bits(value, start, length)
     local mask = (1 << length) - 1
     return (value >> start) & mask
+end
+
+-- Get battle log
+function Readers.getLog()
+    local result = {}
+    for _, line in ipairs(logState.history) do
+        table.insert(result, line)
+    end
+    if logState.lastText ~= "" then
+        table.insert(result, logState.lastText)
+    end
+    return result
+end
+
+-- Update log (call every frame)
+function Readers.updateLog()
+    local currentText = Readers.getBattleText()
+    local inBattle = Readers.isInBattle()
+
+    -- Not in battle, clear history
+    if not inBattle then
+        logState.history = {}
+        logState.lastText = ""
+        return
+    end
+
+    -- Text changed
+    if currentText ~= logState.lastText and currentText ~= "" then
+        -- Append old text to history if non-empty
+        if logState.lastText ~= "" then
+            table.insert(logState.history, logState.lastText)
+        end
+        logState.lastText = currentText
+    end
+end
+
+-- Clear log history
+function Readers.clearLog()
+    logState.history = {}
+    logState.lastText = ""
+end
+
+-- Get battle text (raw, no history)
+function Readers.getBattleText()
+    local addr = Config.ADDRESS.gDisplayedStringBattle
+    local text = {}
+
+    for i = 0, 299 do
+        local b = read_u8(addr + i)
+        if b == 0xFF then break end  -- GBA string terminator
+        table.insert(text, GBACharmap[b] or "?")
+    end
+
+    return table.concat(text)
 end
 
 -- Data order table for Gen3 Pokemon decryption
@@ -233,20 +313,5 @@ function Readers.getBattlePhase()
     return Config.BATTLE_PHASE.ACTION_SELECT
 end
 
--- Get battle text
-function Readers.getBattleText()
-    local addr = Config.ADDRESS.gDisplayedStringBattle
-    local text = ""
-    for i = 0, 299 do
-        local b = read_u8(addr + i)
-        if b == 0xFF then break end
-        if b >= 0x20 and b <= 0x7E then
-            text = text .. string.char(b)
-        elseif b ~= 0 then
-            text = text .. "?"
-        end
-    end
-    return text
-end
 
 return Readers

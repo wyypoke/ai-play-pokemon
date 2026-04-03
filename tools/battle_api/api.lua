@@ -46,10 +46,16 @@ function Api.handleEnemy(client)
     sendJson(client, {party = party})
 end
 
--- GET /log - Get battle text
+-- GET /log - Get battle log with history
 function Api.handleLog(client)
-    local text = Readers.getBattleText()
-    sendJson(client, {text = text})
+    local log = Readers.getLog()
+    sendJson(client, log)
+end
+
+-- POST /log/clear - Clear log history
+function Api.handleLogClear(client)
+    Readers.clearLog()
+    sendJson(client, {success = true, message = "Log history cleared"})
 end
 
 -- GET /phase - Get battle phase
@@ -208,6 +214,8 @@ function Api.route(client, method, path, query, body)
             Api.handleActionMove(client, body)
         elseif path == "/action/switch" then
             Api.handleActionSwitch(client, body)
+        elseif path == "/log/clear" then
+            Api.handleLogClear(client)
         else
             sendError(client, "Not found", 404)
         end
