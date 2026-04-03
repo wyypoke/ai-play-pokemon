@@ -77,7 +77,8 @@ Config.SERVER = {
     port = 8080,
 }
 
--- State save path (relative to BizHawk)
-Config.STATE_PATH = "../../GBA/State/"
+-- State save path (absolute path recommended)
+-- BizHawk savestate.load needs path relative to BizHawk exe or absolute path
+Config.STATE_PATH = "GBA/State/"
 
 return Config

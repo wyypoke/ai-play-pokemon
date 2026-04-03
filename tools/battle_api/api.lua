@@ -176,14 +176,15 @@ function Api.handleLoadState(client, query)
     end
 
     local statePath = Config.STATE_PATH .. query.name .. ".State"
-    local success, err = pcall(function()
-        return savestate.load(statePath)
-    end)
+    console.log("Loading state: " .. statePath)
 
-    if success then
-        sendJson(client, {success = true, message = "State loaded: " .. query.name})
+    local result = savestate.load(statePath)
+    console.log("savestate.load result: " .. tostring(result))
+
+    if result then
+        sendJson(client, {success = true, message = "State loaded: " .. query.name, path = statePath})
     else
-        sendError(client, "Failed to load state: " .. tostring(err), 500)
+        sendError(client, "Failed to load state: " .. statePath, 500)
     end
 end
 
