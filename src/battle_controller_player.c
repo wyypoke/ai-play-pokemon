@@ -1379,17 +1379,6 @@ static void OpenPartyMenuToChooseMon(void)
 
 static void WaitForMonSelection(void)
 {
-    u8 injectedPartyId;
-
-    // ========== 新增：检查外部注入 ==========
-    if (TryGetInjectedSwitch(gActiveBattler, &injectedPartyId))
-    {
-        BtlController_EmitChosenMonReturnValue(B_COMM_TO_ENGINE, injectedPartyId, gBattlePartyCurrentOrder);
-        PlayerBufferExecCompleted();
-        return;
-    }
-    // ========================================
-
     if (gMain.callback2 == BattleMainCB2 && !gPaletteFade.active)
     {
         if (gPartyMenuUseExitCallback == TRUE)
@@ -2697,6 +2686,17 @@ static void PlayerHandleChooseItem(void)
 static void PlayerHandleChoosePokemon(void)
 {
     s32 i;
+    u8 injectedPartyId;
+
+    // ========== 新增：检查切换注入 ==========
+    // 在打开队伍菜单之前检查注入，直接返回结果跳过菜单
+    if (TryGetInjectedSwitch(gActiveBattler, &injectedPartyId))
+    {
+        BtlController_EmitChosenMonReturnValue(B_COMM_TO_ENGINE, injectedPartyId, gBattlePartyCurrentOrder);
+        PlayerBufferExecCompleted();
+        return;  // 跳过队伍菜单
+    }
+    // ========================================
 
     for (i = 0; i < (int)ARRAY_COUNT(gBattlePartyCurrentOrder); i++)
         gBattlePartyCurrentOrder[i] = gBattleBufferA[gActiveBattler][4 + i];
