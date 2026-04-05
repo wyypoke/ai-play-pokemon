@@ -1,1 +1,0 @@
-D:\lua5.1\lua5.1.exe ../squish/squish.lua --no-minify --output=pokemon-memory-reader.lua
