@@ -1,3 +1,4 @@
+# ai-play-pokemon 项目
 # BizHawk 模拟器
 BizHawk-2.11-win-x64/
 
@@ -11,6 +12,7 @@ BizHawk-2.11-win-x64/
 *.State
 *.sav
 *.srm
+!data/*.gba
 
 # 配置文件（可能含密钥）
 *.ini
@@ -25,7 +27,7 @@ lua5.1/
 *.exe
 *.dll
 
-# 编译的 Lua 脚本（源码在 pokemon-memory-reader）
+# 编译的 Lua 脚本
 pokemon-memory-reader/pokemon-memory-reader.lua
 
 # Java
@@ -34,6 +36,44 @@ pokemon-memory-reader/pokemon-memory-reader.lua
 *.war
 target/
 !.mvn/wrapper/maven-wrapper.jar
+
+# pokeemerald 编译产物
+*.o
+*.i
+*.elf
+!data/*.gba
+*.sgm
+*.sa1
+*.ss[0-9]
+*.sg1
+*.1bpp
+*.4bpp
+*.8bpp
+*.gbapal
+*.lz
+*.rl
+*.latfont
+*.hwjpnfont
+*.fwjpnfont
+sound/**/*.bin
+sound/songs/midi/*.s
+tools/agbcc
+*.map
+*.bat
+*.dump
+*.sa*
+build/
+*.ddump
+porymap.*.cfg
+prefabs.json
+*.a
+.fuse_hidden*
+*.sna
+*.diff
+*.sym
+*.js
+/pokeemerald-*.png
+/pokeemerald_modern-*.png
 
 # IDE
 .idea/

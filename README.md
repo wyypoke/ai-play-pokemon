@@ -10,36 +10,30 @@ ai-play-pokemon/
 │   └── src/
 │       ├── main/java/            # 主要代码
 │       └── test/java/            # 单元测试
-├── pokemon-memory-reader/        # Lua 脚本源码
-│   ├── main.lua                  # 入口脚本
-│   ├── network/                  # HTTP 服务模块
-│   ├── readers/                  # 内存读取模块
-│   └── ...
-├── build-lua.bat                 # Lua 构建脚本
+├── pokeemerald/                  # Pokemon Emerald 源码（修改版）
+│   └── ai_server/                # Lua HTTP 服务
+├── archived/                     # 归档文件
 └── README.md
 ```
 
 ## 环境要求
 
 - Java 17+
-- BizHawk 2.11 (GBA 模拟器)
+- BizHawk 2.11 (GBA 模拟器) 或 mGBA
 - Pokemon Emerald ROM
 
 ## 快速开始
 
-### 1. 构建 Lua 脚本
+### 1. 编译 pokeemerald (可选)
 
 ```bash
-build-lua.bat
+cd pokeemerald
+make
 ```
 
-生成的脚本位于 `BizHawk-2.11-win-x64/Lua/GBA/pokemon-memory-reader.lua`
+### 2. 启动 Lua 服务器
 
-### 2. 启动 BizHawk
-
-1. 打开 BizHawk，加载 Pokemon Emerald ROM
-2. 打开 Lua 控制台 (Tools -> Lua Console)
-3. 加载脚本 `Lua/GBA/pokemon-memory-reader.lua`
+在 mGBA 中加载 ROM 和 `pokeemerald/ai_server/main.lua`
 
 ### 3. 启动 Java 后端
 
@@ -48,20 +42,10 @@ cd ai-play-pokemon
 mvn spring-boot:run
 ```
 
-### 4. 测试 API
+### 4. 运行测试
 
 ```bash
-# 加载存档
-curl "http://localhost:8080/loadstate?name=Double-Battle-Test"
-
-# 获取队伍信息
-curl "http://localhost:8080/party"
-
-# 获取玩家信息
-curl "http://localhost:8080/player"
-
-# 发送按键
-curl "http://localhost:8080/input?buttons=A,B,UP"
+mvn test -Dtest=EmulatorBattleGraphTest
 ```
 
 ## API 端点
@@ -69,25 +53,25 @@ curl "http://localhost:8080/input?buttons=A,B,UP"
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/party` | GET | 获取队伍信息 |
-| `/player` | GET | 获取玩家信息 |
-| `/bag` | GET | 获取背包信息 |
-| `/enemy` | GET | 获取敌方信息 |
 | `/battle` | GET | 获取战斗状态 |
-| `/map` | GET | 获取地图信息 |
-| `/input` | GET | 发送按键序列 |
+| `/phase` | GET | 获取战斗阶段 |
+| `/action/move` | POST | 注入招式行动 |
+| `/action/switch` | POST | 注入替换行动 |
 | `/loadstate` | GET | 加载存档 |
-| `/status` | GET | 获取服务状态 |
-
-## 支持的按键
-
-`A`, `B`, `L`, `R`, `START`, `SELECT`, `UP`, `DOWN`, `LEFT`, `RIGHT`
+| `/screenshot` | GET | 获取截图 |
 
 ## 技术栈
 
 - Java 17 + Spring Boot
 - Spring AI Alibaba (LLM Agent)
-- Lua (BizHawk 脚本)
-- Apache HttpClient
+- Lua (mGBA/BizHawk 脚本)
+- pokeemerald (Pokemon Emerald 反编译)
+
+## pokeemerald
+
+基于 Pokémon Emerald 反编译项目，添加了 AI 对战接口。
+
+原始项目: [pret/pokeemerald](https://github.com/pret/pokeemerald)
 
 ## License
 

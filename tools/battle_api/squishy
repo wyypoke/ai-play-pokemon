@@ -1,0 +1,24 @@
+-- Squish configuration for Battle API
+-- Usage: lua squish.lua --no-minify --output=battle_api.lua
+
+Main "main.lua"
+
+-- Custom modules
+Module "config" "config.lua"
+Module "server" "server.lua"
+Module "api" "api.lua"
+Module "readers" "readers.lua"
+
+-- JSON library (pure Lua)
+Module "dkjson" "modules/dkjson.lua"
+
+-- LuaSocket modules (Lua part, socket.core provided by BizHawk)
+Module "socket" "modules/LuaSocket/socket.lua"
+Module "socket.url" "modules/LuaSocket/socket/url.lua"
+Module "socket.http" "modules/LuaSocket/socket/http.lua"
+Module "socket.tp" "modules/LuaSocket/socket/tp.lua"
+Module "socket.headers" "modules/LuaSocket/socket/headers.lua"
+Module "ltn12" "modules/LuaSocket/ltn12.lua"
+Module "mime" "modules/LuaSocket/mime.lua"
+
+Output "battle_api"

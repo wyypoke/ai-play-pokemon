@@ -1,0 +1,26 @@
+-- Squish configuration for AI Server
+-- 参考 pokemon-memory-reader 的配置
+
+Main "main.lua"
+
+-- 自定义模块
+Module "config" "config.lua"
+Module "memory_utils" "memory_utils.lua"
+Module "battle_state" "battle_state.lua"
+Module "ai_caller" "ai_caller.lua"
+Module "server" "server.lua"
+Module "http_utils" "http_utils.lua"
+
+-- JSON library (纯 Lua)
+Module "json" "json.lua"
+
+-- LuaSocket 模块（打包 Lua 部分，socket.core 由 BizHawk 提供）
+Module "socket" "LuaSocket/socket.lua"
+Module "socket.url" "LuaSocket/socket/url.lua"
+Module "socket.http" "LuaSocket/socket/http.lua"
+Module "socket.tp" "LuaSocket/socket/tp.lua"
+Module "socket.headers" "LuaSocket/socket/headers.lua"
+Module "ltn12" "LuaSocket/ltn12.lua"
+Module "mime" "LuaSocket/mime.lua"
+
+Output "ai_server"
