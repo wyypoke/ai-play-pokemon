@@ -1,0 +1,249 @@
+:root {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-input: #334155;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: #475569;
+  --success: #22c55e;
+  --error: #ef4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+header {
+  text-align: center;
+  padding: 30px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 30px;
+}
+
+header h1 { font-size: 2rem; margin-bottom: 8px; }
+header p { color: var(--text-muted); }
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.pokemon-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.pokemon-card:hover { border-color: var(--primary); }
+.pokemon-card.active { border-color: var(--primary); background: linear-gradient(135deg, var(--bg-card), rgba(59, 130, 246, 0.15)); }
+.pokemon-card.empty { border: 2px dashed var(--border); background: transparent; }
+
+.pokemon-card .slot { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; }
+.pokemon-card .species { font-weight: 600; font-size: 0.9rem; }
+.pokemon-card .level { font-size: 0.8rem; color: var(--text-muted); }
+
+.edit-panel {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.edit-panel h2 {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 0.75rem; color: var(--text-muted); }
+
+.form-group select,
+.form-group input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.form-group select:focus,
+.form-group input:focus { outline: none; border-color: var(--primary); }
+
+/* 搜索下拉框 */
+.search-select {
+  position: relative;
+}
+
+.search-select input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 0.85rem;
+  width: 100%;
+  cursor: pointer;
+}
+
+.search-select input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.search-select input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-select .dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.search-select .option {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.search-select .option:hover {
+  background: var(--bg-input);
+}
+
+.search-select .option.selected {
+  background: var(--primary);
+  color: white;
+}
+
+.search-select .no-results {
+  padding: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.section-title {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.moves-group {
+  grid-column: 1 / -1;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.moves-group h3 { font-size: 0.85rem; margin-bottom: 12px; color: var(--text-muted); }
+.moves-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+.actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-secondary { background: var(--bg-input); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); }
+.btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
+
+.output-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.output-section h2 { font-size: 1.1rem; margin-bottom: 16px; }
+
+.output-section pre {
+  background: #0d1117;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--success);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+}
+
+.toast.show { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 1000px) {
+  .team-grid { grid-template-columns: repeat(3, 1fr); }
+  .form-grid { grid-template-columns: repeat(3, 1fr); }
+  .moves-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .container { padding: 12px; }
+  .team-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr; }
+  .moves-grid { grid-template-columns: 1fr; }
+}

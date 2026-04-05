@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokemon Team Injector</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <header>
+        <h1>Pokemon Team Injector</h1>
+        <p>为 pokeemerald 生成 BizHawk 注入脚本</p>
+      </header>
+
+      <!-- 队伍槽位 -->
+      <section class="team-section">
+        <div class="team-grid">
+          <div
+            v-for="(pokemon, index) in team"
+            :key="index"
+            class="pokemon-card"
+            :class="{ active: selectedIndex === index, empty: !pokemon.species }"
+            @click="selectSlot(index)"
+          >
+            <div class="slot">Slot {{ index + 1 }}</div>
+            <template v-if="pokemon.species">
+              <div class="species">{{ getSpeciesName(pokemon.species) }}</div>
+              <div class="level">Lv. {{ pokemon.level }}</div>
+            </template>
+            <template v-else>
+              <div class="species">Empty</div>
+            </template>
+          </div>
+        </div>
+      </section>
+
+      <!-- 编辑面板 -->
+      <section class="edit-panel" v-if="selectedIndex !== null">
+        <h2>
+          <span>编辑 Slot {{ selectedIndex + 1 }}</span>
+          <button class="btn btn-danger btn-sm" @click="clearSlot" v-if="team[selectedIndex].species">清空</button>
+        </h2>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Species</label>
+            <search-select
+              v-model="team[selectedIndex].species"
+              :options="speciesOptions"
+              placeholder="-- 选择精灵 --"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Level</label>
+            <input type="number" v-model.number="team[selectedIndex].level" min="1" max="100">
+          </div>
+
+          <div class="form-group">
+            <label>Ability</label>
+            <select v-model.number="team[selectedIndex].abilityNum" :disabled="currentAbilities.length === 0">
+              <option v-for="a in currentAbilities" :key="a.num" :value="a.num">{{ a.display }}</option>
+              <option v-if="currentAbilities.length === 0" :value="0">-- 先选择精灵 --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Item</label>
+            <search-select
+              v-model="team[selectedIndex].item"
+              :options="itemsOptions"
+              placeholder="-- 无 --"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Friendship</label>
+            <input type="number" v-model.number="team[selectedIndex].friendship" min="0" max="255">
+          </div>
+
+          <div class="form-group">
+            <label>OT ID</label>
+            <input type="number" v-model.number="team[selectedIndex].otId" min="0" max="65535">
+          </div>
+
+          <!-- IVs -->
+          <div class="section-title">IVs (0-31)</div>
+          <div class="form-group">
+            <label>HP</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.hp" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>Atk</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.attack" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>Def</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.defense" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>SpA</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.spAttack" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>SpD</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.spDefense" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>Spe</label>
+            <input type="number" v-model.number="team[selectedIndex].ivs.speed" min="0" max="31">
+          </div>
+
+          <!-- EVs -->
+          <div class="section-title">EVs (0-255)</div>
+          <div class="form-group">
+            <label>HP</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.hp" min="0" max="255">
+          </div>
+          <div class="form-group">
+            <label>Atk</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.attack" min="0" max="255">
+          </div>
+          <div class="form-group">
+            <label>Def</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.defense" min="0" max="255">
+          </div>
+          <div class="form-group">
+            <label>SpA</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.spAttack" min="0" max="255">
+          </div>
+          <div class="form-group">
+            <label>SpD</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.spDefense" min="0" max="255">
+          </div>
+          <div class="form-group">
+            <label>Spe</label>
+            <input type="number" v-model.number="team[selectedIndex].evs.speed" min="0" max="255">
+          </div>
+
+          <!-- Moves -->
+          <div class="moves-group">
+            <h3>Moves</h3>
+            <div class="moves-grid">
+              <div class="form-group" v-for="i in 4" :key="'move'+i">
+                <label>Move {{ i }}</label>
+                <search-select
+                  v-model="team[selectedIndex].moves[i-1]"
+                  :options="movesOptions"
+                  placeholder="-- 无 --"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 输出区域 -->
+      <section class="output-section">
+        <h2>生成的 Lua 脚本</h2>
+        <pre><code>{{ generatedScript }}</code></pre>
+        <div class="actions">
+          <button class="btn btn-primary" @click="copyScript">复制脚本</button>
+          <button class="btn btn-secondary" @click="downloadScript">下载 .lua</button>
+          <button class="btn btn-secondary" @click="resetTeam">重置队伍</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" :class="{ show: toastVisible }">{{ toastMessage }}</div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="js/bundle.js"></script>
+</body>
+</html>

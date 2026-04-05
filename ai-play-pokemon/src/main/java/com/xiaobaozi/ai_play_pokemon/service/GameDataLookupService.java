@@ -24,10 +24,10 @@ public class GameDataLookupService {
 
     private static final Logger log = LoggerFactory.getLogger(GameDataLookupService.class);
 
-    @Value("${gamedata.species.path:pokeemerald/tools/inject_ui/js/data/species.js}")
+    @Value("${gamedata.species.path:../pokeemerald/tools/inject_ui/js/data/species.js}")
     private String speciesDataPath;
 
-    @Value("${gamedata.moves.path:pokeemerald/tools/inject_ui/js/data/moves.js}")
+    @Value("${gamedata.moves.path:../pokeemerald/tools/inject_ui/js/data/moves.js}")
     private String movesDataPath;
 
     private Map<Integer, String> speciesNames = new HashMap<>();
