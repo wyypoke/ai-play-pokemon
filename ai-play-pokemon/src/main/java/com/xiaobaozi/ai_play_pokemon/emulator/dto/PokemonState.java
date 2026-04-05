@@ -70,6 +70,11 @@ public class PokemonState {
     private boolean fainted;
 
     /**
+     * 是否是蛋
+     */
+    private boolean egg;
+
+    /**
      * 携带道具（如果可见）
      */
     private String item;
@@ -276,6 +281,14 @@ public class PokemonState {
 
     public void setFainted(boolean fainted) {
         this.fainted = fainted;
+    }
+
+    public boolean isEgg() {
+        return egg;
+    }
+
+    public void setEgg(boolean egg) {
+        this.egg = egg;
     }
 
     public String getItem() {

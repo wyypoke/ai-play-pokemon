@@ -8,7 +8,7 @@ public class EmulatorConfig {
     /**
      * Lua 服务器 URL
      */
-    private String serverUrl = "http://localhost:3000";
+    private String serverUrl = "http://localhost:8080";
 
     /**
      * 请求超时（毫秒）
@@ -46,7 +46,7 @@ public class EmulatorConfig {
     }
 
     public static class EmulatorConfigBuilder {
-        private String serverUrl = "http://localhost:3000";
+        private String serverUrl = "http://localhost:8080";
         private int timeout = 30000;
         private String savePath = "./saves/";
         private int retryCount = 3;

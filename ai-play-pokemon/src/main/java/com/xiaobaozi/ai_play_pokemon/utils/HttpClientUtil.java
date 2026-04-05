@@ -4,6 +4,7 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
@@ -24,7 +25,7 @@ import java.util.Map;
  */
 public class HttpClientUtil {
 
-    static final  int TIMEOUT_MSEC = 5 * 1000;
+    static final  int TIMEOUT_MSEC = 60 * 1000;
 
     /**
      * 发送GET方式请求
@@ -215,6 +216,74 @@ public class HttpClientUtil {
         }
 
         return result;
+    }
+
+    /**
+     * 发送 JSON POST 请求
+     * @param url 请求URL
+     * @param jsonBody JSON请求体
+     * @return 响应内容
+     */
+    public static String postJson(String url, String jsonBody) {
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        String resultString = "";
+
+        try {
+            HttpPost httpPost = new HttpPost(url);
+            StringEntity entity = new StringEntity(jsonBody, "UTF-8");
+            entity.setContentType("application/json; charset=UTF-8");
+            httpPost.setEntity(entity);
+            httpPost.setConfig(builderRequestConfig());
+
+            response = httpClient.execute(httpPost);
+            resultString = EntityUtils.toString(response.getEntity(), "UTF-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return resultString;
+    }
+
+    /**
+     * 发送 DELETE 请求
+     * @param url 请求URL
+     * @return 响应内容
+     */
+    public static String sendDeleteRequest(String url) {
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        CloseableHttpResponse response = null;
+        String resultString = "";
+
+        try {
+            HttpDelete httpDelete = new HttpDelete(url);
+            httpDelete.setConfig(builderRequestConfig());
+
+            response = httpClient.execute(httpDelete);
+            resultString = EntityUtils.toString(response.getEntity(), "UTF-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (response != null) {
+                    response.close();
+                }
+                httpClient.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return resultString;
     }
 
 }
